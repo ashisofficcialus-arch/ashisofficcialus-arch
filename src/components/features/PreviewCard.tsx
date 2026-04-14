@@ -75,7 +75,7 @@ export function PreviewCard({
           </button>
         </div>
 
-        <div className="p-5 space-y-4">
+        <div className="p-4 sm:p-5 space-y-4">
           {metadata.author && (
             <div className="flex items-center gap-2 text-silver">
               <User className="w-4 h-4" />
@@ -97,7 +97,7 @@ export function PreviewCard({
                   key={format.formatId}
                   onClick={() => onSelectFormat(format)}
                   className={cn(
-                    'flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
+                    'flex items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all',
                     'border',
                     selectedFormat?.formatId === format.formatId
                       ? 'bg-violet/20 border-violet text-violet-light'
@@ -107,7 +107,7 @@ export function PreviewCard({
                   {extensionIcons[format.extension] || <Film className="w-4 h-4" />}
                   <span className="uppercase">{format.extension}</span>
                   {format.resolution && (
-                    <span className="text-xs opacity-60">{format.resolution}</span>
+                    <span className="text-xs opacity-60 hidden sm:inline">{format.resolution}</span>
                   )}
                 </button>
               ))}

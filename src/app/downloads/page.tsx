@@ -46,72 +46,72 @@ export default function DownloadsPage() {
 
   return (
     <AppLayout>
-      <div className="max-w-4xl mx-auto space-y-6">
-        <div className="flex items-center justify-between">
+      <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6 px-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-outfit font-bold">Downloads</h1>
+            <h1 className="text-2xl lg:text-3xl font-outfit font-bold">Downloads</h1>
             <p className="text-silver">Manage your download queue</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={() => setIsPaused(!isPaused)}
               className={cn(
-                'px-4 py-2 rounded-xl font-medium flex items-center gap-2 transition-colors',
+                'px-3 sm:px-4 py-2 rounded-xl font-medium flex items-center gap-2 transition-colors',
                 isPaused ? 'bg-amber/20 text-amber' : 'bg-surface text-silver hover:text-white'
               )}
             >
               {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
-              {isPaused ? 'Resume' : 'Pause'}
+              <span className="hidden sm:inline">{isPaused ? 'Resume' : 'Pause'}</span>
             </button>
             {completedCount > 0 && (
               <button
                 onClick={handleClearCompleted}
-                className="px-4 py-2 rounded-xl font-medium flex items-center gap-2 bg-surface text-silver hover:text-rose transition-colors"
+                className="px-3 sm:px-4 py-2 rounded-xl font-medium flex items-center gap-2 bg-surface text-silver hover:text-rose transition-colors"
               >
                 <Trash2 className="w-4 h-4" />
-                Clear
+                <span className="hidden sm:inline">Clear</span>
               </button>
             )}
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="p-4 bg-charcoal rounded-xl border border-graphite">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          <div className="p-3 sm:p-4 bg-charcoal rounded-xl border border-graphite">
             <div className="flex items-center gap-2 text-sm text-zinc mb-1">
               <Clock className="w-4 h-4" />
-              Active
+              <span className="hidden sm:inline">Active</span>
             </div>
-            <div className="text-2xl font-bold text-white">{activeCount}</div>
+            <div className="text-xl sm:text-2xl font-bold text-white">{activeCount}</div>
           </div>
-          <div className="p-4 bg-charcoal rounded-xl border border-graphite">
+          <div className="p-3 sm:p-4 bg-charcoal rounded-xl border border-graphite">
             <div className="flex items-center gap-2 text-sm text-zinc mb-1">
               <Download className="w-4 h-4" />
-              Completed
+              <span className="hidden sm:inline">Completed</span>
             </div>
-            <div className="text-2xl font-bold text-emerald">{completedCount}</div>
+            <div className="text-xl sm:text-2xl font-bold text-emerald">{completedCount}</div>
           </div>
-          <div className="p-4 bg-charcoal rounded-xl border border-graphite">
+          <div className="p-3 sm:p-4 bg-charcoal rounded-xl border border-graphite">
             <div className="flex items-center gap-2 text-sm text-zinc mb-1">
               <Filter className="w-4 h-4" />
-              Error
+              <span className="hidden sm:inline">Error</span>
             </div>
-            <div className="text-2xl font-bold text-rose">{errorCount}</div>
+            <div className="text-xl sm:text-2xl font-bold text-rose">{errorCount}</div>
           </div>
-          <div className="p-4 bg-charcoal rounded-xl border border-graphite">
+          <div className="p-3 sm:p-4 bg-charcoal rounded-xl border border-graphite">
             <div className="flex items-center gap-2 text-sm text-zinc mb-1">
-              Total
+              <span className="hidden sm:inline">Total</span>
             </div>
-            <div className="text-2xl font-bold text-white">{items.length}</div>
+            <div className="text-xl sm:text-2xl font-bold text-white">{items.length}</div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 p-1 bg-charcoal rounded-xl border border-graphite w-fit">
+        <div className="flex items-center gap-2 p-1 bg-charcoal rounded-xl border border-graphite w-fit overflow-x-auto">
           {(['all', 'active', 'completed', 'error'] as FilterType[]).map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
               className={cn(
-                'px-4 py-2 rounded-lg text-sm font-medium capitalize transition-colors',
+                'px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium capitalize transition-colors whitespace-nowrap',
                 filter === f
                   ? 'bg-violet text-white'
                   : 'text-silver hover:text-white'

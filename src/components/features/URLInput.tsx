@@ -88,7 +88,7 @@ export function URLInput({ onSubmit, isProcessing }: URLInputProps) {
           'group-hover:border-violet/60'
         )} />
         
-        <div className="relative flex items-center gap-3 px-6 py-5">
+        <div className="relative flex flex-col sm:flex-row items-stretch sm:items-center gap-3 px-4 sm:px-6 py-4 sm:py-5">
           <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-surface flex items-center justify-center">
             {isProcessing ? (
               <Loader2 className="w-5 h-5 text-violet animate-spin" />
@@ -107,8 +107,8 @@ export function URLInput({ onSubmit, isProcessing }: URLInputProps) {
             value={url}
             onChange={(e) => handleChange(e.target.value)}
             onPaste={handlePaste}
-            placeholder="Paste video URL here... (YouTube, Instagram, TikTok, etc.)"
-            className="flex-1 bg-transparent text-lg placeholder:text-zinc focus:outline-none"
+            placeholder="Paste video URL here..."
+            className="flex-1 bg-transparent text-base sm:text-lg placeholder:text-zinc focus:outline-none min-h-[44px]"
             disabled={isProcessing}
           />
 
@@ -125,16 +125,16 @@ export function URLInput({ onSubmit, isProcessing }: URLInputProps) {
             type="submit"
             disabled={!url || status === 'error' || isProcessing}
             className={cn(
-              'px-6 py-2.5 rounded-xl font-medium transition-all duration-200',
+              'px-4 sm:px-6 py-2.5 rounded-xl font-medium transition-all duration-200',
               'bg-violet hover:bg-violet-light disabled:bg-surface disabled:text-zinc',
-              'flex items-center gap-2',
+              'flex items-center justify-center gap-2',
               'shadow-glow hover:shadow-lg'
             )}
           >
             {isProcessing ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Processing
+                <span className="hidden sm:inline">Processing</span>
               </>
             ) : (
               'Fetch'

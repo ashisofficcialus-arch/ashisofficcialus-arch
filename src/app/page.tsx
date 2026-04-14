@@ -74,16 +74,37 @@ export default function Dashboard() {
     setSelectedFormat(null);
   }, [setSelectedFormat]);
 
-  return (
+return (
     <AppLayout>
-      <div className="max-w-5xl mx-auto space-y-8">
-        <div className="text-center space-y-4 pt-8">
-          <h1 className="text-5xl font-outfit font-bold">
-            <span className="text-gradient">Download</span> Videos
+      <div className='max-w-5xl mx-auto space-y-6 lg:space-y-8'>
+        <div className='text-center space-y-3 lg:space-y-4 pt-4 lg:pt-8 px-4'>
+          <h1 className='text-3xl lg:text-5xl font-outfit font-bold'>
+            <span className='text-gradient'>Download</span> Videos
           </h1>
-          <p className="text-lg text-silver max-w-2xl mx-auto">
+          <p className='text-base lg:text-lg text-silver max-w-2xl mx-auto'>
             Extract videos from YouTube, Instagram, TikTok, and 20+ other platforms in high quality.
           </p>
+        </div>
+
+        <div className='px-4'>
+          <URLInput onSubmit={handleSubmit} isProcessing={isProcessing} />
+        </div>
+
+        <div className='grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-2 lg:gap-3 px-4'>
+          {supportedPlatforms.map((platform) => (
+            <div
+              key={platform.name}
+              className='flex items-center gap-2 p-2 lg:p-3 rounded-xl bg-charcoal border border-graphite hover:border-violet/30 transition-colors cursor-pointer'
+            >
+              <div
+                className='w-6 h-6 lg:w-8 lg:h-8 rounded-lg flex items-center justify-center'
+                style={{ backgroundColor: platform.color + '20', color: platform.color }}
+              >
+                <platform.icon className='w-3 h-3 lg:w-4 lg:h-4' />
+              </div>
+              <span className='text-xs lg:text-sm font-medium text-silver hidden md:block'>{platform.name}</span>
+            </div>
+          ))}
         </div>
 
         <URLInput onSubmit={handleSubmit} isProcessing={isProcessing} />
@@ -118,33 +139,33 @@ export default function Dashboard() {
           />
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-8">
-          <div className="p-6 bg-charcoal rounded-2xl border border-graphite">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-xl bg-violet/20 flex items-center justify-center">
-                <Zap className="w-5 h-5 text-violet" />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 lg:gap-4 pt-4 lg:pt-8 px-4">
+          <div className="p-4 lg:p-6 bg-charcoal rounded-2xl border border-graphite">
+            <div className="flex items-center gap-2 lg:gap-3 mb-1 lg:mb-2">
+              <div className="w-8 lg:w-10 h-8 lg:h-10 rounded-xl bg-violet/20 flex items-center justify-center">
+                <Zap className="w-4 lg:w-5 h-4 lg:h-5 text-violet" />
               </div>
-              <h3 className="font-medium">Lightning Fast</h3>
+              <h3 className="text-sm lg:text-base font-medium">Lightning Fast</h3>
             </div>
-            <p className="text-sm text-zinc">Download videos at maximum speed with our optimized extraction engine.</p>
+            <p className="text-xs lg:text-sm text-zinc">Download videos at maximum speed with our optimized extraction engine.</p>
           </div>
-          <div className="p-6 bg-charcoal rounded-2xl border border-graphite">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-xl bg-cyan/20 flex items-center justify-center">
-                <Video className="w-5 h-5 text-cyan" />
+          <div className="p-4 lg:p-6 bg-charcoal rounded-2xl border border-graphite">
+            <div className="flex items-center gap-2 lg:gap-3 mb-1 lg:mb-2">
+              <div className="w-8 lg:w-10 h-8 lg:h-10 rounded-xl bg-cyan/20 flex items-center justify-center">
+                <Video className="w-4 lg:w-5 h-4 lg:h-5 text-cyan" />
               </div>
-              <h3 className="font-medium">Multi-Platform</h3>
+              <h3 className="text-sm lg:text-base font-medium">Multi-Platform</h3>
             </div>
-            <p className="text-sm text-zinc">Support for YouTube, Instagram, TikTok, and 20+ other platforms.</p>
+            <p className="text-xs lg:text-sm text-zinc">Support for YouTube, Instagram, TikTok, and 20+ other platforms.</p>
           </div>
-          <div className="p-6 bg-charcoal rounded-2xl border border-graphite">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-xl bg-emerald/20 flex items-center justify-center">
-                <Zap className="w-5 h-5 text-emerald" />
+          <div className="p-4 lg:p-6 bg-charcoal rounded-2xl border border-graphite">
+            <div className="flex items-center gap-2 lg:gap-3 mb-1 lg:mb-2">
+              <div className="w-8 lg:w-10 h-8 lg:h-10 rounded-xl bg-emerald/20 flex items-center justify-center">
+                <Zap className="w-4 lg:w-5 h-4 lg:h-5 text-emerald" />
               </div>
-              <h3 className="font-medium">Zero Storage</h3>
+              <h3 className="text-sm lg:text-base font-medium">Zero Storage</h3>
             </div>
-            <p className="text-sm text-zinc">Stream directly to your device without server-side file storage.</p>
+            <p className="text-xs lg:text-sm text-zinc">Stream directly to your device without server-side file storage.</p>
           </div>
         </div>
       </div>

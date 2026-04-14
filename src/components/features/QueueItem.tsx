@@ -59,7 +59,7 @@ export function QueueItem({ item, onCancel, onRetry, onRemove }: QueueItemProps)
 
   return (
     <div className={cn(
-      'flex items-center gap-4 p-4 bg-charcoal rounded-xl border border-graphite',
+      'flex flex-col sm:items-center gap-3 sm:gap-4 p-3 sm:p-4 bg-charcoal rounded-xl border border-graphite',
       'transition-all hover:border-violet/30'
     )}>
       <div className="relative w-20 h-14 rounded-lg overflow-hidden flex-shrink-0">
@@ -97,12 +97,12 @@ export function QueueItem({ item, onCancel, onRetry, onRemove }: QueueItemProps)
       </div>
 
       {(item.status === 'processing' || item.status === 'converting') && (
-        <div className="w-24">
+        <div className="w-full sm:w-24">
           <Progress value={item.progress} showLabel />
         </div>
       )}
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
         {item.status === 'error' && (
           <button
             onClick={() => onRetry(item.id)}
