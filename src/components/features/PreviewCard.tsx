@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { X, Play, Clock, User, Download, Film, Music, Loader2, CheckCircle2, ExternalLink } from 'lucide-react';
 import { cn, formatDuration } from '@/lib/utils';
 import type { VideoMetadata, VideoFormat } from '@/types';
@@ -11,7 +11,6 @@ interface PreviewCardProps {
   formats: VideoFormat[];
   selectedFormat: VideoFormat | null;
   onSelectFormat: (format: VideoFormat) => void;
-  onDownload: () => void;
   onClose: () => void;
 }
 
@@ -34,19 +33,18 @@ export function PreviewCard({
 }: PreviewCardProps) {
   const platform = PLATFORMS[metadata.platform];
   const [downloadState, setDownloadState] = useState<DownloadState>('idle');
-  const [progress, setProgress] = useState(0);
-  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const handleDownload = async () => {
     if (!selectedFormat) return;
     
     setDownloadState('preparing');
-    setProgress(0);
     setError(null);
-    setDownloadUrl(null);
 
     try {
+      const filename = `${metadata.title.replace(/[^a-zA-Z0-9]/g, '_')}.${selectedFormat.extension}`;
+      
       const response = await fetch('/api/download', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -62,24 +60,19 @@ export function PreviewCard({
         throw new Error(data.error || 'Download failed');
       }
 
-      const data = await response.json();
+      const contentDisposition = response.headers.get('Content-Disposition');
+      const blob = await response.blob();
       
-      if (data.downloadUrl) {
-        setDownloadState('complete');
-        setDownloadUrl(data.downloadUrl);
-        
-        const link = document.createElement('a');
-        link.href = data.downloadUrl;
-        link.download = `${metadata.title.replace(/[^a-zA-Z0-9]/g, '_')}.${selectedFormat.extension}`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      } else if (data.directUrl) {
-        setDownloadState('complete');
-        setDownloadUrl(data.directUrl);
-        
-        window.open(data.directUrl, '_blank');
-      }
+      const downloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(downloadUrl);
+
+      setDownloadState('complete');
     } catch (err) {
       setDownloadState('error');
       setError(err instanceof Error ? err.message : 'Download failed');
@@ -88,11 +81,11 @@ export function PreviewCard({
 
   const handleReset = () => {
     setDownloadState('idle');
-    setProgress(0);
-    setDownloadUrl(null);
     setError(null);
     onClose();
   };
+
+  const isYouTube = metadata.platform === 'youtube';
 
   return (
     <div className="w-full max-w-3xl mx-auto animate-slide-up">
@@ -132,9 +125,11 @@ export function PreviewCard({
             </h3>
           </div>
 
-          <button className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full bg-violet/90 hover:bg-violet flex items-center justify-center transition-all hover:scale-110 shadow-glow">
-            <Play className="w-7 h-7 text-white ml-1" fill="currentColor" />
-          </button>
+          {isYouTube && downloadState !== 'complete' && (
+            <button className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full bg-violet/90 hover:bg-violet flex items-center justify-center transition-all hover:scale-110 shadow-glow">
+              <Play className="w-7 h-7 text-white ml-1" fill="currentColor" />
+            </button>
+          )}
         </div>
 
         <div className="p-4 sm:p-5 space-y-4">
@@ -157,21 +152,12 @@ export function PreviewCard({
             </div>
           )}
 
-          {downloadState === 'complete' && downloadUrl && (
+          {downloadState === 'complete' && (
             <div className="p-3 rounded-xl bg-emerald/20 border border-emerald/30">
-              <div className="flex items-center gap-2 text-emerald mb-2">
+              <div className="flex items-center gap-2 text-emerald">
                 <CheckCircle2 className="w-5 h-5" />
-                <span className="font-medium">Download Started!</span>
+                <span className="font-medium">Download Complete!</span>
               </div>
-              <a
-                href={downloadUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 text-sm text-emerald/80 hover:text-emerald transition-colors"
-              >
-                <ExternalLink className="w-4 h-4" />
-                Open download link
-              </a>
             </div>
           )}
 
@@ -184,9 +170,11 @@ export function PreviewCard({
                     <button
                       key={format.formatId}
                       onClick={() => onSelectFormat(format)}
+                      disabled={!isYouTube}
                       className={cn(
                         'flex items-center justify-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2.5 rounded-xl text-xs sm:text-sm font-medium transition-all',
                         'border',
+                        !isYouTube && 'opacity-50 cursor-not-allowed',
                         selectedFormat?.formatId === format.formatId
                           ? 'bg-violet/20 border-violet text-violet-light'
                           : 'bg-surface border-graphite text-silver hover:border-violet/50'
@@ -202,33 +190,41 @@ export function PreviewCard({
                 </div>
               </div>
 
-              <button
-                onClick={handleDownload}
-                disabled={!selectedFormat}
-                className={cn(
-                  'w-full py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-all',
-                  'bg-violet hover:bg-violet-light disabled:bg-surface disabled:text-zinc',
-                  'shadow-glow hover:shadow-lg'
-                )}
-              >
-                <Download className="w-5 h-5" />
-                {selectedFormat ? `Download ${selectedFormat.extension.toUpperCase()}` : 'Select Format'}
-              </button>
+              {isYouTube ? (
+                <button
+                  onClick={handleDownload}
+                  disabled={!selectedFormat}
+                  className={cn(
+                    'w-full py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-all',
+                    'bg-violet hover:bg-violet-light disabled:bg-surface disabled:text-zinc',
+                    'shadow-glow hover:shadow-lg'
+                  )}
+                >
+                  <Download className="w-5 h-5" />
+                  {selectedFormat ? `Download ${selectedFormat.extension.toUpperCase()}` : 'Select Format'}
+                </button>
+              ) : (
+                <a
+                  href={metadata.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cn(
+                    'w-full py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-all text-center',
+                    'bg-violet hover:bg-violet-light',
+                    'shadow-glow hover:shadow-lg'
+                  )}
+                >
+                  <ExternalLink className="w-5 h-5" />
+                  Open Original Video
+                </a>
+              )}
             </>
           )}
 
           {downloadState === 'preparing' && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-center gap-3 py-4">
-                <Loader2 className="w-5 h-5 text-violet animate-spin" />
-                <span className="text-silver">Preparing download...</span>
-              </div>
-              <div className="h-2 bg-surface rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-violet transition-all duration-300"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
+            <div className="flex items-center justify-center gap-3 py-6">
+              <Loader2 className="w-6 h-6 text-violet animate-spin" />
+              <span className="text-silver">Preparing download...</span>
             </div>
           )}
 

@@ -76,17 +76,6 @@ export default function Dashboard() {
     }
   }, []);
 
-  const handleDownload = useCallback(() => {
-    if (preview && selectedFormat) {
-      addItem({
-        metadata: preview.metadata,
-        format: selectedFormat,
-      });
-      setPreview(null);
-      setSelectedFormat(null);
-    }
-  }, [preview, selectedFormat, addItem, setSelectedFormat]);
-
   const handleClose = useCallback(() => {
     setPreview(null);
     setSelectedFormat(null);
@@ -152,7 +141,6 @@ return (
             formats={preview.formats}
             selectedFormat={selectedFormat}
             onSelectFormat={setSelectedFormat}
-            onDownload={handleDownload}
             onClose={handleClose}
           />
         )}
