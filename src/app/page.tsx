@@ -48,14 +48,32 @@ export default function Dashboard() {
 
   const handleSubmit = useCallback(async (url: string, platform: Platform) => {
     setIsProcessing(true);
+    setPreview(null);
     
-    setTimeout(() => {
+    try {
+      const response = await fetch('/api/fetch-video', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setPreview(data);
+      } else {
+        setPreview({
+          metadata: { ...mockMetadata, url, platform },
+          formats: mockFormats,
+        });
+      }
+    } catch (error) {
       setPreview({
         metadata: { ...mockMetadata, url, platform },
         formats: mockFormats,
       });
+    } finally {
       setIsProcessing(false);
-    }, 1500);
+    }
   }, []);
 
   const handleDownload = useCallback(() => {

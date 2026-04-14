@@ -128,8 +128,9 @@ export const PLATFORMS: Record<Platform, PlatformInfo> = {
 };
 
 export function detectPlatform(url: string): Platform {
+  const normalizedUrl = url.toLowerCase();
   for (const [platform, info] of Object.entries(PLATFORMS)) {
-    if (info.patterns.some(pattern => pattern.test(url))) {
+    if (info.patterns.some(pattern => pattern.test(normalizedUrl))) {
       return platform as Platform;
     }
   }
