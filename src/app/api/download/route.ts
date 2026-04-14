@@ -1,7 +1,8 @@
 'use server';
 
 import { NextRequest, NextResponse } from 'next/server';
-import ytdl from 'ytdl-core';
+
+const PYTHON_API_URL = process.env.PYTHON_API_URL || 'http://localhost:5000';
 
 function extractYouTubeVideoId(url: string): string | null {
   const patterns = [
@@ -17,96 +18,51 @@ function extractYouTubeVideoId(url: string): string | null {
 
 export async function POST(request: NextRequest) {
   try {
-    const { url, format } = await request.json();
+    const { url, format, platform } = await request.json();
 
     if (!url || typeof url !== 'string') {
       return NextResponse.json({ error: 'URL is required' }, { status: 400 });
     }
 
-    const videoId = extractYouTubeVideoId(url);
-    if (!videoId) {
-      return NextResponse.json({ error: 'Invalid YouTube URL' }, { status: 400 });
+    if (platform === 'youtube' || platform === undefined) {
+      const resolution = format?.resolution || '1080p';
+      const resolutionMap: Record<string, string> = {
+        '4K': '2160p',
+        '2160p': '2160p',
+        '1080p': '1080p',
+        'HD': '1080p',
+        '720p': '720p',
+        '480p': '480p',
+        '360p': '360p',
+      };
+      
+      const targetRes = resolutionMap[resolution] || '1080p';
+      
+      const pythonResponse = await fetch(`${PYTHON_API_URL}/download`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, resolution: targetRes }),
+      });
+
+      if (!pythonResponse.ok) {
+        const error = await pythonResponse.json();
+        return NextResponse.json({ error: error.error || 'Download failed' }, { status: pythonResponse.status });
+      }
+
+      const headers = new Headers();
+      headers.set('Content-Type', 'video/mp4');
+      headers.set('Content-Disposition', 'attachment');
+      
+      return new NextResponse(pythonResponse.body, {
+        headers,
+      });
     }
 
-    const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
-    
-    const videoInfo = await ytdl.getInfo(videoUrl, {
-      requestOptions: {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        },
-      },
-    });
-
-    const videoDetails = videoInfo.videoDetails;
-    const title = videoDetails.title.replace(/[<>:"/\\|?*]/g, '');
-    const extension = format?.extension || 'mp4';
-    
-    const targetQuality = format?.resolution || format?.quality || 'highest';
-    
-    let selectedFormat;
-    
-    if (targetQuality === '4K' || targetQuality === '2160p') {
-      selectedFormat = videoInfo.formats.find(f => f.itag === 137 || f.itag === 315);
-    } else if (targetQuality === '1080p' || targetQuality === 'HD') {
-      selectedFormat = videoInfo.formats.find(f => f.itag === 137 || f.itag === 248);
-    } else if (targetQuality === '720p') {
-      selectedFormat = videoInfo.formats.find(f => f.itag === 136 || f.itag === 247);
-    } else if (targetQuality === '480p') {
-      selectedFormat = videoInfo.formats.find(f => f.itag === 135 || f.itag === 244);
-    } else if (targetQuality === '360p') {
-      selectedFormat = videoInfo.formats.find(f => f.itag === 134 || f.itag === 243);
-    } else if (targetQuality === '128kbps' || extension === 'mp3') {
-      selectedFormat = videoInfo.formats.find(f => f.itag === 140);
-    } else {
-      selectedFormat = videoInfo.formats.find(f => f.itag === 137 || f.itag === 248) || 
-                    videoInfo.formats.find(f => f.itag === 136) ||
-                    videoInfo.formats.find(f => f.hasVideo && f.hasAudio);
-    }
-
-    if (!selectedFormat) {
-      selectedFormat = ytdl.filterFormats(videoInfo.formats, 'videoandaudio')[0];
-    }
-
-    if (!selectedFormat) {
-      return NextResponse.json({ 
-        error: 'No format available. Video may require different quality.' 
-      }, { status: 400 });
-    }
-
-    const stream = ytdl.downloadFromInfo(videoInfo, {
-      format: selectedFormat,
-    });
-
-    const chunks: Buffer[] = [];
-    
-    for await (const chunk of stream) {
-      chunks.push(Buffer.from(chunk));
-    }
-    
-    const buffer = Buffer.concat(chunks);
-    const filename = `${title}_${videoId}.${selectedFormat.container || 'mp4'}`;
-
-    const headers = new Headers();
-    headers.set('Content-Disposition', `attachment; filename="${filename}"`);
-    headers.set('Content-Type', 'video/mp4');
-    headers.set('Content-Length', buffer.length.toString());
-
-    return new NextResponse(buffer, { headers });
-
+    return NextResponse.json({ error: 'Only YouTube is supported for now' }, { status: 400 });
   } catch (error) {
     console.error('Download error:', error);
-    
-    const message = error instanceof Error ? error.message : 'Download failed';
-    
-    if (message.includes('410') || message.includes('Gone') || message.includes('Video unavailable')) {
-      return NextResponse.json({ 
-        error: 'Video is unavailable. It may have been removed or made private.' 
-      }, { status: 410 });
-    }
-    
     return NextResponse.json({ 
-      error: `Download failed: ${message}` 
+      error: error instanceof Error ? error.message : 'Download failed' 
     }, { status: 500 });
   }
 }

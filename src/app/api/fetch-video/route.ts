@@ -2,6 +2,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
+const PYTHON_API_URL = process.env.PYTHON_API_URL || 'http://localhost:5000';
+
 const PLATFORMS: Record<string, { name: string; color: string }> = {
   youtube: { name: 'YouTube', color: '#FF0000' },
   instagram: { name: 'Instagram', color: '#E4405F' },
@@ -26,68 +28,45 @@ function detectPlatform(url: string): string {
   return 'unknown';
 }
 
-function extractYouTubeVideoId(url: string): string | null {
-  const patterns = [
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/)([^&\n?#]+)/,
-    /^([a-zA-Z0-9_-]{11})$/,
-  ];
-  for (const pattern of patterns) {
-    const match = url.match(pattern);
-    if (match) return match[1];
-  }
-  return null;
-}
-
 async function fetchYouTubeMetadata(url: string) {
-  const videoId = extractYouTubeVideoId(url);
-  if (!videoId) return null;
-
   try {
-    const apiUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
-    const response = await fetch(apiUrl, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; VideoForge/1.0)' },
+    const response = await fetch(`${PYTHON_API_URL}/video_info`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
     });
 
     if (!response.ok) {
-      const thumbnailRes = await fetch(`https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`);
-      if (thumbnailRes.ok) {
-        return {
-          id: videoId,
-          url,
-          title: `YouTube Video ${videoId}`,
-          description: 'Video from YouTube',
-          thumbnail: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
-          duration: 0,
-          author: 'YouTube Creator',
-          platform: 'youtube',
-        };
-      }
-      return null;
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to fetch video info');
     }
 
     const data = await response.json();
+    
     return {
-      id: videoId,
+      id: data.id,
       url,
-      title: data.title || `YouTube Video ${videoId}`,
-      description: data.author_name ? `By ${data.author_name}` : 'YouTube video',
-      thumbnail: data.thumbnail_url || `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`,
-      duration: 0,
-      author: data.author_name || 'Unknown',
-      authorUrl: data.author_url,
+      title: data.title,
+      description: data.description,
+      thumbnail: data.thumbnail_url,
+      duration: data.length || 0,
+      author: data.author,
+      authorUrl: data.channel_url,
       platform: 'youtube',
+      viewCount: data.views,
+      uploadDate: data.publish_date,
     };
   } catch (error) {
     console.error('YouTube fetch error:', error);
-    const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+    const videoId = url.match(/(?:v=|be\/)([^&\n?#]+)/)?.[1] || '';
     return {
       id: videoId,
       url,
-      title: `YouTube Video ${videoId}`,
+      title: `YouTube Video`,
       description: 'Video from YouTube',
-      thumbnail: thumbnailUrl,
+      thumbnail: videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : '',
       duration: 0,
-      author: 'YouTube Creator',
+      author: 'Unknown',
       platform: 'youtube',
     };
   }
@@ -136,7 +115,7 @@ export async function POST(request: NextRequest) {
       { formatId: '1', extension: 'mp4', resolution: '2160p', quality: '4K', filesize: 2500000000, hasVideo: true, hasAudio: true },
       { formatId: '2', extension: 'mp4', resolution: '1080p', quality: 'HD', filesize: 850000000, hasVideo: true, hasAudio: true },
       { formatId: '3', extension: 'mp4', resolution: '720p', quality: 'SD', filesize: 450000000, hasVideo: true, hasAudio: true },
-      { formatId: '4', extension: 'webm', resolution: '1080p', quality: 'HD', filesize: 650000000, hasVideo: true, hasAudio: true },
+      { formatId: '4', extension: 'mp4', resolution: '480p', quality: 'SD', filesize: 250000000, hasVideo: true, hasAudio: true },
       { formatId: '5', extension: 'mp3', quality: '320kbps', filesize: 8500000, hasAudio: true, hasVideo: false },
       { formatId: '6', extension: 'mp3', quality: '128kbps', filesize: 3400000, hasAudio: true, hasVideo: false },
     ];
