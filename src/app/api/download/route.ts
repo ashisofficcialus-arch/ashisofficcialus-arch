@@ -15,22 +15,6 @@ function extractYouTubeVideoId(url: string): string | null {
   return null;
 }
 
-const formatMap: Record<string, { itag: number; ext: string; quality: string }[]> = {
-  mp4: [
-    { itag: 137, ext: 'mp4', quality: '1080p' },
-    { itag: 136, ext: 'mp4', quality: '720p' },
-    { itag: 135, ext: 'mp4', quality: '480p' },
-    { itag: 134, ext: 'mp4', quality: '360p' },
-  ],
-  webm: [
-    { itag: 248, ext: 'webm', quality: '1080p' },
-    { itag: 247, ext: 'webm', quality: '720p' },
-  ],
-  mp3: [
-    { itag: 140, ext: 'mp4', quality: '128kbps' },
-  ],
-};
-
 export async function POST(request: NextRequest) {
   try {
     const { url, format } = await request.json();
@@ -44,10 +28,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid YouTube URL' }, { status: 400 });
     }
 
-    const videoInfo = await ytdl.getInfo(videoId, {
+    const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
+    
+    const videoInfo = await ytdl.getInfo(videoUrl, {
       requestOptions: {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         },
       },
     });
@@ -55,80 +41,72 @@ export async function POST(request: NextRequest) {
     const videoDetails = videoInfo.videoDetails;
     const title = videoDetails.title.replace(/[<>:"/\\|?*]/g, '');
     const extension = format?.extension || 'mp4';
-
-    const formats = ytdl.filterFormats(videoInfo.formats, 'videoandaudio');
-    let bestFormat = formats.find(f => f.container === extension);
     
-    if (!bestFormat) {
-      bestFormat = formats.find(f => f.container === 'mp4');
-    }
+    const targetQuality = format?.resolution || format?.quality || 'highest';
     
-    if (!bestFormat && extension === 'mp3') {
-      const audioFormats = ytdl.filterFormats(videoInfo.formats, 'audioonly');
-      bestFormat = audioFormats.find(f => f.container === 'mp4');
+    let selectedFormat;
+    
+    if (targetQuality === '4K' || targetQuality === '2160p') {
+      selectedFormat = videoInfo.formats.find(f => f.itag === 137 || f.itag === 315);
+    } else if (targetQuality === '1080p' || targetQuality === 'HD') {
+      selectedFormat = videoInfo.formats.find(f => f.itag === 137 || f.itag === 248);
+    } else if (targetQuality === '720p') {
+      selectedFormat = videoInfo.formats.find(f => f.itag === 136 || f.itag === 247);
+    } else if (targetQuality === '480p') {
+      selectedFormat = videoInfo.formats.find(f => f.itag === 135 || f.itag === 244);
+    } else if (targetQuality === '360p') {
+      selectedFormat = videoInfo.formats.find(f => f.itag === 134 || f.itag === 243);
+    } else if (targetQuality === '128kbps' || extension === 'mp3') {
+      selectedFormat = videoInfo.formats.find(f => f.itag === 140);
+    } else {
+      selectedFormat = videoInfo.formats.find(f => f.itag === 137 || f.itag === 248) || 
+                    videoInfo.formats.find(f => f.itag === 136) ||
+                    videoInfo.formats.find(f => f.hasVideo && f.hasAudio);
     }
 
-    if (!bestFormat) {
+    if (!selectedFormat) {
+      selectedFormat = ytdl.filterFormats(videoInfo.formats, 'videoandaudio')[0];
+    }
+
+    if (!selectedFormat) {
       return NextResponse.json({ 
-        error: 'No suitable format found. Try a different quality or format.' 
+        error: 'No format available. Video may require different quality.' 
       }, { status: 400 });
     }
 
-    const stream = ytdl.downloadFromInfo(videoInfo, { format: bestFormat });
-
-    const headers = new Headers();
-    headers.set('Content-Disposition', `attachment; filename="${title}.${bestFormat.container}"`);
-    headers.set('Content-Type', 'video/mp4');
-
-    return new NextResponse(stream as any, {
-      headers,
+    const stream = ytdl.downloadFromInfo(videoInfo, {
+      format: selectedFormat,
     });
-  } catch (error) {
-    console.error('Download error:', error);
-    return NextResponse.json({ 
-      error: error instanceof Error ? error.message : 'Download failed' 
-    }, { status: 500 });
-  }
-}
 
-export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const url = searchParams.get('url');
-  const format = searchParams.get('format') || 'mp4';
-  const quality = searchParams.get('quality') || 'highest';
-
-  if (!url) {
-    return NextResponse.json({ error: 'URL is required' }, { status: 400 });
-  }
-
-  const videoId = extractYouTubeVideoId(url);
-  if (!videoId) {
-    return NextResponse.json({ error: 'Invalid YouTube URL' }, { status: 400 });
-  }
-
-  try {
-    const videoInfo = await ytdl.getInfo(videoId);
-    const videoDetails = videoInfo.videoDetails;
-    const title = videoDetails.title.replace(/[<>:"/\\|?*]/g, '');
-
-    const formats = ytdl.filterFormats(videoInfo.formats, 'videoandaudio');
-    let selectedFormat = formats.find(f => f.container === format);
-
-    if (!selectedFormat) {
-      selectedFormat = formats[0];
+    const chunks: Buffer[] = [];
+    
+    for await (const chunk of stream) {
+      chunks.push(Buffer.from(chunk));
     }
+    
+    const buffer = Buffer.concat(chunks);
+    const filename = `${title}_${videoId}.${selectedFormat.container || 'mp4'}`;
 
     const headers = new Headers();
-    headers.set('Content-Disposition', `attachment; filename="${title}.${selectedFormat.container}"`);
+    headers.set('Content-Disposition', `attachment; filename="${filename}"`);
     headers.set('Content-Type', 'video/mp4');
+    headers.set('Content-Length', buffer.length.toString());
 
-    const stream = ytdl.downloadFromInfo(videoInfo, { format: selectedFormat });
+    return new NextResponse(buffer, { headers });
 
-    return new NextResponse(stream as any, {
-      headers,
-    });
   } catch (error) {
     console.error('Download error:', error);
-    return NextResponse.json({ error: 'Download failed' }, { status: 500 });
+    
+    const message = error instanceof Error ? error.message : 'Download failed';
+    
+    if (message.includes('410') || message.includes('Gone') || message.includes('Video unavailable')) {
+      return NextResponse.json({ 
+        error: 'Video is unavailable. It may have been removed or made private.' 
+      }, { status: 410 });
+    }
+    
+    return NextResponse.json({ 
+      error: `Download failed: ${message}` 
+    }, { status: 500 });
   }
 }
