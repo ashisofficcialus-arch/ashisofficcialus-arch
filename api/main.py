@@ -1,9 +1,9 @@
+import os
 from flask import Flask, request, jsonify, send_file, Response
 from flask_cors import CORS
 import pytubefix
 from pytubefix import Playlist, YouTube
 import re
-import os
 
 app = Flask(__name__)
 CORS(app)
@@ -200,4 +200,5 @@ def index():
     })
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)

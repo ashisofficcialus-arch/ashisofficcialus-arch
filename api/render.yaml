@@ -1,0 +1,10 @@
+services:
+  - name: youtube-api
+    github_repo: https://github.com/ashisofficcialus-arch/ashisofficcialus-arch
+    root_directory: api
+    build_command: pip install -r requirements.txt
+    start_command: gunicorn main:app
+    env_vars:
+      - key: PYTHON_VERSION
+        value: "3.11"
+    plan: free
